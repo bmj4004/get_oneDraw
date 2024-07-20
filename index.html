@@ -66,12 +66,10 @@
         const recordingsList = document.getElementById('recordingsList');
         const clearButton = document.getElementById('clearButton');
 
-        // 캔버스 크기 설정
         const size = Math.min(window.innerWidth, window.innerHeight) - 40;
         canvas.width = size;
         canvas.height = size;
 
-        // 캔버스 배경색 설정
         ctx.fillStyle = 'black';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
