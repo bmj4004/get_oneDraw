@@ -8,6 +8,12 @@ displayCanvas.height = window.innerHeight;
 recordingCanvas.width = displayCanvas.width;
 recordingCanvas.height = displayCanvas.height;
 
+// 캔버스 배경을 검은색으로 설정
+displayCtx.fillStyle = "black";
+displayCtx.fillRect(0, 0, displayCanvas.width, displayCanvas.height);
+recordingCtx.fillStyle = "black";
+recordingCtx.fillRect(0, 0, recordingCanvas.width, recordingCanvas.height);
+
 let isPainting = false;
 let mediaRecorder;
 let recordedChunks = [];
@@ -35,6 +41,7 @@ function startRecording() {
 function stopRecording() {
     mediaRecorder.stop();
     recordingCtx.clearRect(0, 0, recordingCanvas.width, recordingCanvas.height); // 녹화용 캔버스 초기화
+    recordingCtx.fillRect(0, 0, recordingCanvas.width, recordingCanvas.height); // 배경을 다시 검은색으로
 }
 
 displayCanvas.addEventListener('touchstart', function(e) {
@@ -61,7 +68,9 @@ displayCanvas.addEventListener('touchend', function() {
 }, false);
 
 displayCtx.lineWidth = 5; // 선 굵기 설정
+displayCtx.strokeStyle = "white"; // 표시용 캔버스의 펜 색상을 흰색으로
 recordingCtx.lineWidth = 5; // 녹화용 캔버스의 선 굵기도 동일하게 설정
+recordingCtx.strokeStyle = "white"; // 녹화용 캔버스의 펜 색상을 흰색으로
 
 function downloadAllVideos() {
     videoBlobs.forEach((blob, index) => {
