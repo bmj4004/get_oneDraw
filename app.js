@@ -4,8 +4,8 @@ const videoList = document.getElementById('videoList');
 const clearCanvasButton = document.getElementById('clearCanvasButton');
 const saveAllVideosButton = document.getElementById('saveAllVideosButton');
 
-displayCanvas.width = 800;
-displayCanvas.height = 800;
+displayCanvas.width = 500; // Reduced size
+displayCanvas.height = 500; // Reduced size
 
 function initializeCanvas() {
     ctx.fillStyle = "black";
@@ -90,18 +90,22 @@ displayCanvas.addEventListener('touchend', (e) => {
 
 clearCanvasButton.addEventListener('click', () => {
     initializeCanvas();
-    videoList.innerHTML = '<h3>Recorded Videos</h3>';  // Reset video list properly
+    while (videoList.children.length > 1) {
+        videoList.removeChild(videoList.lastChild);
+    }
     videoURLs = [];
     videoCount = 0;
 });
 
 saveAllVideosButton.addEventListener('click', () => {
     videoURLs.forEach((url, index) => {
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Video-${index + 1}.webm`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        setTimeout(() => {
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Video-${index + 1}.webm`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }, index * 100);
     });
 });
