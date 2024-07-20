@@ -1,11 +1,11 @@
 const displayCanvas = document.getElementById('displayCanvas');
 const ctx = displayCanvas.getContext('2d');
-const videoListDiv = document.getElementById('videoList');
+const videoList = document.getElementById('videoList');
 const clearCanvasButton = document.getElementById('clearCanvasButton');
+const saveAllVideosButton = document.getElementById('saveAllVideosButton');
 
-// 캔버스 크기 설정
-displayCanvas.width = 500;
-displayCanvas.height = 500;
+displayCanvas.width = 800;
+displayCanvas.height = 800;
 
 function initializeCanvas() {
     ctx.fillStyle = "black";
@@ -19,24 +19,49 @@ initializeCanvas();
 let isPainting = false;
 let mediaRecorder;
 let recordedChunks = [];
+let videoURLs = [];
 let videoCount = 0;
 
-function addVideoToList(title) {
-    const listItem = document.createElement('li');
-    listItem.textContent = title;
-    videoListDiv.appendChild(listItem);
+displayCanvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    startPainting(e.touches[0]);
+}, false);
+
+displayCanvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (isPainting) {
+        draw(e.touches[0]);
+    }
+}, false);
+
+displayCanvas.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    stopPainting();
+}, false);
+
+function startPainting(touch) {
+    isPainting = true;
+    const { clientX, clientY } = touch;
+    ctx.beginPath();
+    ctx.moveTo(clientX - displayCanvas.offsetLeft, clientY - displayCanvas.offsetTop);
+    startRecording();
 }
 
-displayCanvas.addEventListener('touchstart', function(e) {
-    e.preventDefault();
-    isPainting = true;
-    const x = e.touches[0].clientX - displayCanvas.offsetLeft;
-    const y = e.touches[0].clientY - displayCanvas.offsetTop;
-    ctx.beginPath();
-    ctx.moveTo(x, y);
+function draw(touch) {
+    const { clientX, clientY } = touch;
+    ctx.lineTo(clientX - displayCanvas.offsetLeft, clientY - displayCanvas.offsetTop);
+    ctx.stroke();
+}
 
-    // 녹화 시작
-    const stream = displayCanvas.captureStream(30);  // 30fps
+function stopPainting() {
+    isPainting = false;
+    ctx.closePath();
+    mediaRecorder.stop();
+}
+
+function startRecording() {
+    recordedChunks = [];
+    const stream = displayCanvas.captureStream(30); // 30fps
     mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
 
     mediaRecorder.ondataavailable = function(event) {
@@ -47,36 +72,41 @@ displayCanvas.addEventListener('touchstart', function(e) {
 
     mediaRecorder.onstop = function() {
         const blob = new Blob(recordedChunks, { type: 'video/webm' });
-        videoCount++;
-        addVideoToList(`Video ${videoCount}`);
-        recordedChunks = [];
+        const url = URL.createObjectURL(blob);
+        videoURLs.push(url);
+        addVideoToList(`Video ${++videoCount}`);
     };
 
     mediaRecorder.start();
-}, false);
+}
 
-displayCanvas.addEventListener('touchmove', function(e) {
-    e.preventDefault();
-    if (isPainting) {
-        const x = e.touches[0].clientX - displayCanvas.offsetLeft;
-        const y = e.touches[0].clientY - displayCanvas.offsetTop;
-        ctx.lineTo(x, y);
-        ctx.stroke();
-    }
-}, false);
+function addVideoToList(title) {
+    const listItem = document.createElement('li');
+    listItem.textContent = title;
+    videoList.appendChild(listItem);
+}
 
-displayCanvas.addEventListener('touchend', function(e) {
-    e.preventDefault();
-    if (isPainting) {
-        isPainting = false;
-        ctx.closePath();
-        mediaRecorder.stop();
-    }
-}, false);
-
-clearCanvasButton.addEventListener('click', function() {
+clearCanvasButton.addEventListener('click', () => {
     initializeCanvas();
-    while (videoListDiv.children.length > 1) {
-        videoListDiv.removeChild(videoListDiv.lastChild);
+    while (videoList.firstChild) {
+        videoList.removeChild(videoList.firstChild);
     }
+    const h3 = document.createElement('h3');
+    h3.textContent = 'Recorded Videos';
+    videoList.appendChild(h3);
+    videoURLs = [];
+    videoCount = 0;
+});
+
+saveAllVideosButton.addEventListener('click', () => {
+    videoURLs.forEach((url, index) => {
+        setTimeout(() => {
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Video-${index + 1}.webm`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }, index * 100);
+    });
 });
