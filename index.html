@@ -1,42 +1,20 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Touch Path Recording</title>
+    <title>터치 녹화 캔버스</title>
     <style>
-        #displayCanvas {
-            border: 1px solid black;
-            touch-action: none;
-        }
-        button {
-            width: 200px;
-            height: 50px;
-            font-size: 16px;
-            margin: 10px;
-        }
-        ul {
-            list-style-type: none;
-            padding: 0;
-        }
-        li {
-            margin-bottom: 5px;
-            color: white; /* Visibility on the black background */
-        }
-        body {
-            background-color: #333; /* Dark background for better visibility */
-            color: white;
-            font-family: Arial, sans-serif;
-        }
+        body { margin: 0; display: flex; flex-direction: column; align-items: center; }
+        #canvas { background: black; }
+        #videos { margin-top: 20px; }
     </style>
 </head>
 <body>
-    <canvas id="displayCanvas"></canvas>
-    <button id="saveAllVideosButton">Save All Videos</button>
-    <button id="clearCanvasButton">Clear Canvas</button>
-    <ul id="videoList">
-        <h3>Recorded Videos</h3>
-    </ul>
+    <canvas id="canvas" width="500" height="500"></canvas>
+    <button onclick="clearCanvas()">초기화</button>
+    <div id="videos"></div>
+
     <script src="app.js"></script>
 </body>
 </html>
