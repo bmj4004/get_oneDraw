@@ -3,28 +3,28 @@ const recordingCanvas = document.getElementById('recordingCanvas');
 const displayCtx = displayCanvas.getContext('2d');
 const recordingCtx = recordingCanvas.getContext('2d');
 const videoListDiv = document.getElementById('videoList');
+const saveAllVideosButton = document.getElementById('saveAllVideosButton');
 
 displayCanvas.width = window.innerWidth;
 displayCanvas.height = window.innerHeight;
 recordingCanvas.width = displayCanvas.width;
 recordingCanvas.height = displayCanvas.height;
 
-function initializeCanvas(ctx, keepDrawing = false) {
-    if (!keepDrawing) {
-        ctx.fillStyle = "black";
-        ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    }
+function initializeCanvas(ctx) {
+    ctx.fillStyle = "black";
+    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     ctx.lineWidth = 5;
     ctx.strokeStyle = "white";
 }
 
-initializeCanvas(displayCtx, true); // 표시용 캔버스는 내용 유지
-initializeCanvas(recordingCtx); // 녹화용 캔버스는 내용 비우기
+initializeCanvas(displayCtx);
+initializeCanvas(recordingCtx);
 
 let isPainting = false;
 let mediaRecorder;
 let recordedChunks = [];
 let videoCount = 0;
+let videoURLs = [];
 
 function startRecording() {
     initializeCanvas(recordingCtx); // 녹화 시작 전에 캔버스 초기화
@@ -42,7 +42,8 @@ function startRecording() {
         const blob = new Blob(recordedChunks, { type: 'video/webm' });
         const url = URL.createObjectURL(blob);
         videoCount++;
-        displayVideoList(url, videoCount);
+        videoURLs.push({ url: url, title: `Video ${videoCount}` });
+        displayVideoList(`Video ${videoCount}`);
     };
 
     mediaRecorder.start();
@@ -52,21 +53,23 @@ function stopRecording() {
     mediaRecorder.stop();
 }
 
-function displayVideoList(videoSrc, index) {
+function displayVideoList(title) {
     const videoTitle = document.createElement('p');
-    videoTitle.textContent = `Video ${index}`;
-    videoTitle.style.cursor = 'pointer';
-    videoTitle.onclick = function() {
+    videoTitle.textContent = title;
+    videoListDiv.appendChild(videoTitle);
+}
+
+saveAllVideosButton.addEventListener('click', function() {
+    videoURLs.forEach(video => {
         const a = document.createElement('a');
-        a.href = videoSrc;
-        a.download = `RecordedVideo-${index}.webm`;
+        a.href = video.url;
+        a.download = `${video.title}.webm`;
         a.style.display = 'none';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-    };
-    videoListDiv.appendChild(videoTitle);
-}
+    });
+});
 
 displayCanvas.addEventListener('touchstart', function(e) {
     isPainting = true;
