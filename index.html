@@ -4,9 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Touch Path Recording</title>
+    <style>
+        #displayCanvas {
+            border: 1px solid black;
+            touch-action: none;
+        }
+        button {
+            width: 150px;
+            height: 50px;
+            margin: 10px;
+            font-size: 16px;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            margin-bottom: 5px;
+        }
+    </style>
 </head>
 <body>
-    <canvas id="displayCanvas" style="border: 1px solid black; touch-action: none;"></canvas>
+    <canvas id="displayCanvas"></canvas>
     <button id="saveAllVideosButton">Save All Videos</button>
     <button id="clearCanvasButton">Clear Canvas</button>
     <ul id="videoList">
