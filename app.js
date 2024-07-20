@@ -11,11 +11,14 @@ displayCanvas.height = window.innerHeight;
 recordingCanvas.width = displayCanvas.width;
 recordingCanvas.height = displayCanvas.height;
 
-function initializeCanvas(ctx) {
+function initializeCanvas(ctx, fullReset = false) {
     ctx.fillStyle = "black";
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     ctx.lineWidth = 5;
     ctx.strokeStyle = "white";
+    if (fullReset) {
+        ctx.beginPath(); // 캔버스 상태를 완전히 초기화
+    }
 }
 
 initializeCanvas(displayCtx);
@@ -28,9 +31,8 @@ let videoCount = 0;
 let videoURLs = [];
 
 function startRecording() {
-    initializeCanvas(recordingCtx); // 녹화 시작 전에 캔버스 초기화
     recordedChunks = [];
-    const stream = recordingCanvas.captureStream(30);
+    const stream = recordingCanvas.captureStream(30); // 30fps로 스트림 캡처
     mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
 
     mediaRecorder.ondataavailable = function(e) {
@@ -51,7 +53,9 @@ function startRecording() {
 }
 
 function stopRecording() {
-    mediaRecorder.stop();
+    if (mediaRecorder.state === "recording") {
+        mediaRecorder.stop();
+    }
 }
 
 function displayVideoList(title) {
@@ -61,10 +65,13 @@ function displayVideoList(title) {
 }
 
 function clearVideoList() {
-    while (videoListDiv.children.length > 1) { // 첫 번째 자식 요소 (h3 태그)를 제외하고 모든 자식 요소 제거
+    while (videoListDiv.children.length > 1) {
         videoListDiv.removeChild(videoListDiv.lastChild);
     }
     videoURLs = []; // URL 목록 초기화
+    initializeCanvas(displayCtx, true); // 캔버스를 완전히 초기화
+    initializeCanvas(recordingCtx, true);
+    videoCount = 0; // 비디오 카운터 리셋
 }
 
 saveAllVideosButton.addEventListener('click', function() {
@@ -76,7 +83,7 @@ saveAllVideosButton.addEventListener('click', function() {
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
-        }, index * 100); // 각 파일 다운로드 사이에 100ms 지연
+        }, index * 100);
     });
 });
 
