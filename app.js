@@ -9,38 +9,28 @@ displayCanvas.height = window.innerHeight;
 recordingCanvas.width = displayCanvas.width;
 recordingCanvas.height = displayCanvas.height;
 
-function initializeCanvas(ctx) {
-    ctx.fillStyle = "black";
-    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+function initializeCanvas(ctx, keepDrawing = false) {
+    if (!keepDrawing) {
+        ctx.fillStyle = "black";
+        ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    }
     ctx.lineWidth = 5;
     ctx.strokeStyle = "white";
 }
 
-initializeCanvas(displayCtx);
-initializeCanvas(recordingCtx);
+initializeCanvas(displayCtx, true); // 표시용 캔버스는 내용 유지
+initializeCanvas(recordingCtx); // 녹화용 캔버스는 내용 비우기
 
 let isPainting = false;
 let mediaRecorder;
 let recordedChunks = [];
-
-function getSupportedMimeType() {
-    if (MediaRecorder.isTypeSupported('video/mp4')) {
-        return 'video/mp4';
-    } else if (MediaRecorder.isTypeSupported('video/webm')) {
-        return 'video/webm';
-    } else {
-        console.error('No supported video format found.');
-        return null;
-    }
-}
+let videoCount = 0;
 
 function startRecording() {
+    initializeCanvas(recordingCtx); // 녹화 시작 전에 캔버스 초기화
     recordedChunks = [];
-    const mimeType = getSupportedMimeType();
-    if (!mimeType) return;
-
     const stream = recordingCanvas.captureStream(30); // 30fps
-    mediaRecorder = new MediaRecorder(stream, { mimeType });
+    mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
 
     mediaRecorder.ondataavailable = function(e) {
         if (e.data.size > 0) {
@@ -49,9 +39,10 @@ function startRecording() {
     };
 
     mediaRecorder.onstop = function() {
-        const blob = new Blob(recordedChunks, { type: mimeType });
+        const blob = new Blob(recordedChunks, { type: 'video/webm' });
         const url = URL.createObjectURL(blob);
-        displayVideoList(url);
+        videoCount++;
+        displayVideoList(url, videoCount);
     };
 
     mediaRecorder.start();
@@ -59,15 +50,22 @@ function startRecording() {
 
 function stopRecording() {
     mediaRecorder.stop();
-    initializeCanvas(recordingCtx);
 }
 
-function displayVideoList(videoSrc) {
-    const videoElement = document.createElement('video');
-    videoElement.src = videoSrc;
-    videoElement.controls = true;
-    videoElement.style.width = '300px';
-    videoListDiv.appendChild(videoElement);
+function displayVideoList(videoSrc, index) {
+    const videoTitle = document.createElement('p');
+    videoTitle.textContent = `Video ${index}`;
+    videoTitle.style.cursor = 'pointer';
+    videoTitle.onclick = function() {
+        const a = document.createElement('a');
+        a.href = videoSrc;
+        a.download = `RecordedVideo-${index}.webm`;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    };
+    videoListDiv.appendChild(videoTitle);
 }
 
 displayCanvas.addEventListener('touchstart', function(e) {
