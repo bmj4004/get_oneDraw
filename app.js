@@ -1,113 +1,71 @@
 const displayCanvas = document.getElementById('displayCanvas');
-const recordingCanvas = document.getElementById('recordingCanvas');
-const displayCtx = displayCanvas.getContext('2d');
-const recordingCtx = recordingCanvas.getContext('2d');
+const ctx = displayCanvas.getContext('2d');
 const videoListDiv = document.getElementById('videoList');
-const saveAllVideosButton = document.getElementById('saveAllVideosButton');
-const clearVideoListButton = document.getElementById('clearVideoListButton');
+const clearCanvasButton = document.getElementById('clearCanvasButton');
 
-displayCanvas.width = window.innerWidth;
-displayCanvas.height = window.innerHeight;
-recordingCanvas.width = displayCanvas.width;
-recordingCanvas.height = displayCanvas.height;
+// 캔버스 설정
+displayCanvas.width = 500;  // 1:1 비율을 위해 너비와 높이를 같게 설정
+displayCanvas.height = 500;
 
-function initializeCanvas(ctx, fullReset = false) {
+function initializeCanvas() {
     ctx.fillStyle = "black";
-    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.fillRect(0, 0, displayCanvas.width, displayCanvas.height);
     ctx.lineWidth = 5;
     ctx.strokeStyle = "white";
-    if (fullReset) {
-        ctx.beginPath(); // 캔버스 상태를 완전히 초기화
-    }
 }
 
-initializeCanvas(displayCtx);
-initializeCanvas(recordingCtx);
+initializeCanvas();
 
 let isPainting = false;
 let mediaRecorder;
 let recordedChunks = [];
-let videoCount = 0;
-let videoURLs = [];
 
-function startRecording() {
-    recordedChunks = [];
-    const stream = recordingCanvas.captureStream(30); // 30fps로 스트림 캡처
+displayCanvas.addEventListener('touchstart', function(e) {
+    isPainting = true;
+    const x = e.touches[0].clientX - displayCanvas.offsetLeft;
+    const y = e.touches[0].clientY - displayCanvas.offsetTop;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+
+    // 녹화 시작
+    const stream = displayCanvas.captureStream(30);  // 30fps
     mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
 
-    mediaRecorder.ondataavailable = function(e) {
-        if (e.data.size > 0) {
-            recordedChunks.push(e.data);
+    mediaRecorder.ondataavailable = function(event) {
+        if (event.data.size > 0) {
+            recordedChunks.push(event.data);
         }
     };
 
     mediaRecorder.onstop = function() {
         const blob = new Blob(recordedChunks, { type: 'video/webm' });
         const url = URL.createObjectURL(blob);
-        videoCount++;
-        videoURLs.push({ url: url, title: `Video ${videoCount}` });
-        displayVideoList(`Video ${videoCount}`);
+        const videoElement = document.createElement('video');
+        videoElement.src = url;
+        videoElement.controls = true;
+        videoElement.width = 250;
+        videoListDiv.appendChild(videoElement);
+        recordedChunks = [];  // 초기화
     };
 
     mediaRecorder.start();
-}
-
-function stopRecording() {
-    if (mediaRecorder.state === "recording") {
-        mediaRecorder.stop();
-    }
-}
-
-function displayVideoList(title) {
-    const videoTitle = document.createElement('p');
-    videoTitle.textContent = title;
-    videoListDiv.appendChild(videoTitle);
-}
-
-function clearVideoList() {
-    while (videoListDiv.children.length > 1) {
-        videoListDiv.removeChild(videoListDiv.lastChild);
-    }
-    videoURLs = []; // URL 목록 초기화
-    initializeCanvas(displayCtx, true); // 캔버스를 완전히 초기화
-    initializeCanvas(recordingCtx, true);
-    videoCount = 0; // 비디오 카운터 리셋
-}
-
-saveAllVideosButton.addEventListener('click', function() {
-    videoURLs.forEach((video, index) => {
-        setTimeout(() => {
-            const a = document.createElement('a');
-            a.href = video.url;
-            a.download = `${video.title}.webm`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        }, index * 100);
-    });
-});
-
-clearVideoListButton.addEventListener('click', clearVideoList);
-
-displayCanvas.addEventListener('touchstart', function(e) {
-    isPainting = true;
-    const { clientX, clientY } = e.touches[0];
-    displayCtx.moveTo(clientX, clientY);
-    recordingCtx.moveTo(clientX, clientY);
-    startRecording();
 }, false);
 
 displayCanvas.addEventListener('touchmove', function(e) {
     if (isPainting) {
-        const { clientX, clientY } = e.touches[0];
-        displayCtx.lineTo(clientX, clientY);
-        displayCtx.stroke();
-        recordingCtx.lineTo(clientX, clientY);
-        recordingCtx.stroke();
+        const x = e.touches[0].clientX - displayCanvas.offsetLeft;
+        const y = e.touches[0].clientY - displayCanvas.offsetTop;
+        ctx.lineTo(x, y);
+        ctx.stroke();
     }
 }, false);
 
 displayCanvas.addEventListener('touchend', function() {
     isPainting = false;
-    stopRecording();
+    mediaRecorder.stop();
+    ctx.closePath();
 }, false);
+
+clearCanvasButton.addEventListener('click', function() {
+    initializeCanvas();
+});
