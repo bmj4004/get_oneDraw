@@ -3,8 +3,8 @@ const ctx = displayCanvas.getContext('2d');
 const videoListDiv = document.getElementById('videoList');
 const clearCanvasButton = document.getElementById('clearCanvasButton');
 
-// 캔버스 설정
-displayCanvas.width = 500;  // 1:1 비율을 위해 너비와 높이를 같게 설정
+// 캔버스 크기 설정
+displayCanvas.width = 500;
 displayCanvas.height = 500;
 
 function initializeCanvas() {
@@ -19,8 +19,16 @@ initializeCanvas();
 let isPainting = false;
 let mediaRecorder;
 let recordedChunks = [];
+let videoCount = 0;
+
+function addVideoToList(title) {
+    const listItem = document.createElement('li');
+    listItem.textContent = title;
+    videoListDiv.appendChild(listItem);
+}
 
 displayCanvas.addEventListener('touchstart', function(e) {
+    e.preventDefault();
     isPainting = true;
     const x = e.touches[0].clientX - displayCanvas.offsetLeft;
     const y = e.touches[0].clientY - displayCanvas.offsetTop;
@@ -39,19 +47,16 @@ displayCanvas.addEventListener('touchstart', function(e) {
 
     mediaRecorder.onstop = function() {
         const blob = new Blob(recordedChunks, { type: 'video/webm' });
-        const url = URL.createObjectURL(blob);
-        const videoElement = document.createElement('video');
-        videoElement.src = url;
-        videoElement.controls = true;
-        videoElement.width = 250;
-        videoListDiv.appendChild(videoElement);
-        recordedChunks = [];  // 초기화
+        videoCount++;
+        addVideoToList(`Video ${videoCount}`);
+        recordedChunks = [];
     };
 
     mediaRecorder.start();
 }, false);
 
 displayCanvas.addEventListener('touchmove', function(e) {
+    e.preventDefault();
     if (isPainting) {
         const x = e.touches[0].clientX - displayCanvas.offsetLeft;
         const y = e.touches[0].clientY - displayCanvas.offsetTop;
@@ -60,12 +65,18 @@ displayCanvas.addEventListener('touchmove', function(e) {
     }
 }, false);
 
-displayCanvas.addEventListener('touchend', function() {
-    isPainting = false;
-    mediaRecorder.stop();
-    ctx.closePath();
+displayCanvas.addEventListener('touchend', function(e) {
+    e.preventDefault();
+    if (isPainting) {
+        isPainting = false;
+        ctx.closePath();
+        mediaRecorder.stop();
+    }
 }, false);
 
 clearCanvasButton.addEventListener('click', function() {
     initializeCanvas();
+    while (videoListDiv.children.length > 1) {
+        videoListDiv.removeChild(videoListDiv.lastChild);
+    }
 });
