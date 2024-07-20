@@ -4,6 +4,7 @@ const displayCtx = displayCanvas.getContext('2d');
 const recordingCtx = recordingCanvas.getContext('2d');
 const videoListDiv = document.getElementById('videoList');
 const saveAllVideosButton = document.getElementById('saveAllVideosButton');
+const clearVideoListButton = document.getElementById('clearVideoListButton');
 
 displayCanvas.width = window.innerWidth;
 displayCanvas.height = window.innerHeight;
@@ -29,7 +30,7 @@ let videoURLs = [];
 function startRecording() {
     initializeCanvas(recordingCtx); // 녹화 시작 전에 캔버스 초기화
     recordedChunks = [];
-    const stream = recordingCanvas.captureStream(30); // 30fps
+    const stream = recordingCanvas.captureStream(30);
     mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
 
     mediaRecorder.ondataavailable = function(e) {
@@ -59,17 +60,25 @@ function displayVideoList(title) {
     videoListDiv.appendChild(videoTitle);
 }
 
+function clearVideoList() {
+    videoListDiv.innerHTML = "<h3>Recorded Videos</h3>"; // 비디오 리스트 제목을 제외하고 모두 비우기
+    videoURLs = []; // 비디오 URL 목록 초기화
+}
+
 saveAllVideosButton.addEventListener('click', function() {
-    videoURLs.forEach(video => {
-        const a = document.createElement('a');
-        a.href = video.url;
-        a.download = `${video.title}.webm`;
-        a.style.display = 'none';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+    videoURLs.forEach((video, index) => {
+        setTimeout(() => {
+            const a = document.createElement('a');
+            a.href = video.url;
+            a.download = `${video.title}.webm`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }, index * 100); // 각 파일 다운로드 사이에 100ms 지연
     });
 });
+
+clearVideoListButton.addEventListener('click', clearVideoList);
 
 displayCanvas.addEventListener('touchstart', function(e) {
     isPainting = true;
