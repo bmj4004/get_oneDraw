@@ -1,111 +1,70 @@
-const displayCanvas = document.getElementById('displayCanvas');
-const ctx = displayCanvas.getContext('2d');
-const videoList = document.getElementById('videoList');
-const clearCanvasButton = document.getElementById('clearCanvasButton');
-const saveAllVideosButton = document.getElementById('saveAllVideosButton');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let isRecording = false;
+let recorder, stream;
+let videoList = document.getElementById('videos');
 
-displayCanvas.width = 500; // Reduced size
-displayCanvas.height = 500; // Reduced size
-
-function initializeCanvas() {
-    ctx.fillStyle = "black";
-    ctx.fillRect(0, 0, displayCanvas.width, displayCanvas.height);
-    ctx.lineWidth = 5;
-    ctx.strokeStyle = "white";
-}
-
-initializeCanvas();
-
-let isPainting = false;
-let mediaRecorder;
-let recordedChunks = [];
-let videoURLs = [];
-let videoCount = 0;
-
-function startPainting(touch) {
-    const { clientX, clientY } = touch;
+canvas.addEventListener('touchstart', (e) => {
+    const touch = e.touches[0];
+    ctx.moveTo(touch.clientX, touch.clientY);
     ctx.beginPath();
-    ctx.moveTo(clientX - displayCanvas.offsetLeft, clientY - displayCanvas.offsetTop);
     startRecording();
-}
+});
 
-function draw(touch) {
-    const { clientX, clientY } = touch;
-    ctx.lineTo(clientX - displayCanvas.offsetLeft, clientY - displayCanvas.offsetTop);
+canvas.addEventListener('touchmove', (e) => {
+    const touch = e.touches[0];
+    ctx.lineTo(touch.clientX, touch.clientY);
     ctx.stroke();
-}
+});
 
-function stopPainting() {
-    isPainting = false;
+canvas.addEventListener('touchend', (e) => {
     ctx.closePath();
-    mediaRecorder.stop();
-}
+    stopRecording();
+});
 
 function startRecording() {
-    recordedChunks = [];
-    const stream = displayCanvas.captureStream(30);
-    mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
-
-    mediaRecorder.ondataavailable = function(event) {
-        if (event.data.size > 0) {
-            recordedChunks.push(event.data);
-        }
-    };
-
-    mediaRecorder.onstop = function() {
-        const blob = new Blob(recordedChunks, { type: 'video/webm' });
-        const url = URL.createObjectURL(blob);
-        videoURLs.push(url);
-        addVideoToList(`Video ${++videoCount}`);
-    };
-
-    mediaRecorder.start();
+    if (!isRecording) {
+        stream = canvas.captureStream(30); // 30fps로 캡처
+        recorder = new MediaRecorder(stream);
+        let chunks = [];
+        recorder.ondataavailable = (e) => chunks.push(e.data);
+        recorder.onstop = () => {
+            let blob = new Blob(chunks, { type: 'video/mp4' });
+            let url = URL.createObjectURL(blob);
+            let video = document.createElement('video');
+            video.src = url;
+            video.controls = true;
+            let downloadBtn = document.createElement('button');
+            downloadBtn.textContent = '다운로드';
+            downloadBtn.onclick = () => downloadVideo(url);
+            videoList.appendChild(video);
+            videoList.appendChild(downloadBtn);
+        };
+        recorder.start();
+        isRecording = true;
+    }
 }
 
-function addVideoToList(title) {
-    const listItem = document.createElement('li');
-    listItem.textContent = title;
-    videoList.appendChild(listItem);
+function stopRecording() {
+    if (isRecording) {
+        recorder.stop();
+        stream.getTracks().forEach(track => track.stop());
+        isRecording = false;
+    }
 }
 
-displayCanvas.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    isPainting = true;
-    startPainting(e.touches[0]);
-}, false);
+function downloadVideo(url) {
+    let a = document.createElement('a');
+    a.href = url;
+    a.download = 'recorded.mp4';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
 
-displayCanvas.addEventListener('touchmove', (e) => {
-    e.preventDefault();
-    if (isPainting) {
-        draw(e.touches[0]);
-    }
-}, false);
+function clearCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    videoList.innerHTML = ''; // 비디오 목록도 초기화
+}
 
-displayCanvas.addEventListener('touchend', (e) => {
-    e.preventDefault();
-    if (isPainting) {
-        stopPainting();
-    }
-}, false);
-
-clearCanvasButton.addEventListener('click', () => {
-    initializeCanvas();
-    while (videoList.children.length > 1) {
-        videoList.removeChild(videoList.lastChild);
-    }
-    videoURLs = [];
-    videoCount = 0;
-});
-
-saveAllVideosButton.addEventListener('click', () => {
-    videoURLs.forEach((url, index) => {
-        setTimeout(() => {
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `Video-${index + 1}.webm`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        }, index * 100);
-    });
-});
