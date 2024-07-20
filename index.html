@@ -47,7 +47,6 @@
         let chunks = [];
         let recordedVideos = [];
 
-        // 캔버스 크기 설정 함수
         function resizeCanvas() {
             const size = Math.min(window.innerWidth - 40, window.innerHeight - 100);
             canvas.width = size;
@@ -63,7 +62,6 @@
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
 
-        // 터치 이벤트 리스너
         canvas.addEventListener('touchstart', startDrawing);
         canvas.addEventListener('touchmove', draw);
         canvas.addEventListener('touchend', stopDrawing);
@@ -89,32 +87,43 @@
             ctx.stroke();
             ctx.beginPath();
             ctx.moveTo(x, y);
+
+            if (mediaRecorder && mediaRecorder.state === "recording") {
+                // 녹화 중일 때만 녹화 캔버스에 그림 그리기
+                recordingCtx.lineWidth = 2;
+                recordingCtx.lineCap = 'round';
+                recordingCtx.strokeStyle = 'white';
+                recordingCtx.lineTo(x, y);
+                recordingCtx.stroke();
+                recordingCtx.beginPath();
+                recordingCtx.moveTo(x, y);
+            }
         }
 
         function stopDrawing() {
             isDrawing = false;
             ctx.beginPath();
+            recordingCtx.beginPath();
             stopRecording();
         }
 
-        // 녹화 기능 시작
         function startRecording() {
             // 녹화 시작 전에 녹화용 캔버스 초기화
             recordingCtx.fillStyle = 'black';
             recordingCtx.fillRect(0, 0, recordingCanvas.width, recordingCanvas.height);
-
+            recordingCtx.beginPath();
             chunks = [];
             const stream = recordingCanvas.captureStream(30);
             mediaRecorder = new MediaRecorder(stream);
-
             mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
             mediaRecorder.onstop = createVideo;
-
             mediaRecorder.start();
         }
 
         function stopRecording() {
-            mediaRecorder.stop();
+            if (mediaRecorder.state === "recording") {
+                mediaRecorder.stop();
+            }
         }
 
         function createVideo() {
@@ -138,7 +147,6 @@
             });
         }
 
-        // 초기화 버튼
         resetBtn.addEventListener('click', () => {
             ctx.fillStyle = 'black';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
