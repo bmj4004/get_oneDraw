@@ -22,25 +22,7 @@ let recordedChunks = [];
 let videoURLs = [];
 let videoCount = 0;
 
-displayCanvas.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    startPainting(e.touches[0]);
-}, false);
-
-displayCanvas.addEventListener('touchmove', (e) => {
-    e.preventDefault();
-    if (isPainting) {
-        draw(e.touches[0]);
-    }
-}, false);
-
-displayCanvas.addEventListener('touchend', (e) => {
-    e.preventDefault();
-    stopPainting();
-}, false);
-
 function startPainting(touch) {
-    isPainting = true;
     const { clientX, clientY } = touch;
     ctx.beginPath();
     ctx.moveTo(clientX - displayCanvas.offsetLeft, clientY - displayCanvas.offsetTop);
@@ -61,7 +43,7 @@ function stopPainting() {
 
 function startRecording() {
     recordedChunks = [];
-    const stream = displayCanvas.captureStream(30); // 30fps
+    const stream = displayCanvas.captureStream(30);
     mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
 
     mediaRecorder.ondataavailable = function(event) {
@@ -86,27 +68,40 @@ function addVideoToList(title) {
     videoList.appendChild(listItem);
 }
 
+displayCanvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    isPainting = true;
+    startPainting(e.touches[0]);
+}, false);
+
+displayCanvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (isPainting) {
+        draw(e.touches[0]);
+    }
+}, false);
+
+displayCanvas.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    if (isPainting) {
+        stopPainting();
+    }
+}, false);
+
 clearCanvasButton.addEventListener('click', () => {
     initializeCanvas();
-    while (videoList.firstChild) {
-        videoList.removeChild(videoList.firstChild);
-    }
-    const h3 = document.createElement('h3');
-    h3.textContent = 'Recorded Videos';
-    videoList.appendChild(h3);
+    videoList.innerHTML = '<h3>Recorded Videos</h3>';  // Reset video list properly
     videoURLs = [];
     videoCount = 0;
 });
 
 saveAllVideosButton.addEventListener('click', () => {
     videoURLs.forEach((url, index) => {
-        setTimeout(() => {
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `Video-${index + 1}.webm`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        }, index * 100);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Video-${index + 1}.webm`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
     });
 });
