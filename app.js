@@ -16,7 +16,6 @@ function initializeCanvas(ctx) {
     ctx.strokeStyle = "white";
 }
 
-// 캔버스 초기화
 initializeCanvas(displayCtx);
 initializeCanvas(recordingCtx);
 
@@ -24,10 +23,24 @@ let isPainting = false;
 let mediaRecorder;
 let recordedChunks = [];
 
+function getSupportedMimeType() {
+    if (MediaRecorder.isTypeSupported('video/mp4')) {
+        return 'video/mp4';
+    } else if (MediaRecorder.isTypeSupported('video/webm')) {
+        return 'video/webm';
+    } else {
+        console.error('No supported video format found.');
+        return null;
+    }
+}
+
 function startRecording() {
     recordedChunks = [];
+    const mimeType = getSupportedMimeType();
+    if (!mimeType) return;
+
     const stream = recordingCanvas.captureStream(30); // 30fps
-    mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/mp4' });
+    mediaRecorder = new MediaRecorder(stream, { mimeType });
 
     mediaRecorder.ondataavailable = function(e) {
         if (e.data.size > 0) {
@@ -36,7 +49,7 @@ function startRecording() {
     };
 
     mediaRecorder.onstop = function() {
-        const blob = new Blob(recordedChunks, { type: 'video/mp4' });
+        const blob = new Blob(recordedChunks, { type: mimeType });
         const url = URL.createObjectURL(blob);
         displayVideoList(url);
     };
@@ -44,17 +57,17 @@ function startRecording() {
     mediaRecorder.start();
 }
 
+function stopRecording() {
+    mediaRecorder.stop();
+    initializeCanvas(recordingCtx);
+}
+
 function displayVideoList(videoSrc) {
     const videoElement = document.createElement('video');
     videoElement.src = videoSrc;
     videoElement.controls = true;
-    videoElement.style.width = "300px"; // 비디오 크기 조정
+    videoElement.style.width = '300px';
     videoListDiv.appendChild(videoElement);
-}
-
-function stopRecording() {
-    mediaRecorder.stop();
-    initializeCanvas(recordingCtx); // 녹화용 캔버스 초기화
 }
 
 displayCanvas.addEventListener('touchstart', function(e) {
