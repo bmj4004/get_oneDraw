@@ -10,8 +10,14 @@
             padding: 20px;
             font-family: Arial, sans-serif;
         }
-        #canvas {
+        #canvasContainer {
+            position: relative;
             border: 1px solid #ccc;
+        }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
         }
         #videoList {
             margin-top: 20px;
@@ -28,13 +34,12 @@
     </style>
 </head>
 <body>
-    <canvas id="canvas"></canvas>
+    <div id="canvasContainer"></div>
     <div id="videoList"></div>
     <button id="resetBtn">초기화</button>
 
     <script>
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
+        const canvasContainer = document.getElementById('canvasContainer');
         const videoList = document.getElementById('videoList');
         const resetBtn = document.getElementById('resetBtn');
 
@@ -42,23 +47,60 @@
         let mediaRecorder;
         let chunks = [];
         let recordedVideos = [];
+        let currentCanvas;
+        let currentCtx;
+        let baseCanvas;
+        let baseCtx;
 
         // 캔버스 크기 설정
         function resizeCanvas() {
             const size = Math.min(window.innerWidth - 40, window.innerHeight - 100);
-            canvas.width = size;
-            canvas.height = size;
-            ctx.fillStyle = 'black';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            canvasContainer.style.width = `${size}px`;
+            canvasContainer.style.height = `${size}px`;
+            
+            if (baseCanvas) {
+                baseCanvas.width = size;
+                baseCanvas.height = size;
+                baseCtx.fillStyle = 'black';
+                baseCtx.fillRect(0, 0, size, size);
+            }
+
+            if (currentCanvas) {
+                currentCanvas.width = size;
+                currentCanvas.height = size;
+            }
         }
 
+        function createBaseCanvas() {
+            baseCanvas = document.createElement('canvas');
+            baseCtx = baseCanvas.getContext('2d');
+            baseCanvas.style.zIndex = 0;
+            canvasContainer.appendChild(baseCanvas);
+            baseCtx.fillStyle = 'black';
+            baseCtx.fillRect(0, 0, baseCanvas.width, baseCanvas.height);
+        }
+
+        function createNewLayer() {
+            if (currentCanvas) {
+                baseCtx.drawImage(currentCanvas, 0, 0);
+                canvasContainer.removeChild(currentCanvas);
+            }
+            currentCanvas = document.createElement('canvas');
+            currentCtx = currentCanvas.getContext('2d');
+            currentCanvas.style.zIndex = 1;
+            canvasContainer.appendChild(currentCanvas);
+            resizeCanvas();
+        }
+
+        createBaseCanvas();
+        createNewLayer();
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
 
         // 터치 이벤트 리스너
-        canvas.addEventListener('touchstart', startDrawing);
-        canvas.addEventListener('touchmove', draw);
-        canvas.addEventListener('touchend', stopDrawing);
+        currentCanvas.addEventListener('touchstart', startDrawing);
+        currentCanvas.addEventListener('touchmove', draw);
+        currentCanvas.addEventListener('touchend', stopDrawing);
 
         function startDrawing(e) {
             isDrawing = true;
@@ -70,30 +112,31 @@
             if (!isDrawing) return;
             e.preventDefault();
             const touch = e.touches[0];
-            const rect = canvas.getBoundingClientRect();
+            const rect = currentCanvas.getBoundingClientRect();
             const x = touch.clientX - rect.left;
             const y = touch.clientY - rect.top;
 
-            ctx.lineWidth = 2;
-            ctx.lineCap = 'round';
-            ctx.strokeStyle = 'white';
+            currentCtx.lineWidth = 2;
+            currentCtx.lineCap = 'round';
+            currentCtx.strokeStyle = 'white';
 
-            ctx.lineTo(x, y);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(x, y);
+            currentCtx.lineTo(x, y);
+            currentCtx.stroke();
+            currentCtx.beginPath();
+            currentCtx.moveTo(x, y);
         }
 
         function stopDrawing() {
             isDrawing = false;
-            ctx.beginPath();
+            currentCtx.beginPath();
             stopRecording();
+            createNewLayer();
         }
 
         // 녹화 기능
         function startRecording() {
             chunks = [];
-            const stream = canvas.captureStream(30);
+            const stream = currentCanvas.captureStream(30);
             mediaRecorder = new MediaRecorder(stream);
 
             mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
@@ -129,8 +172,9 @@
 
         // 초기화 버튼
         resetBtn.addEventListener('click', () => {
-            ctx.fillStyle = 'black';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            baseCtx.fillStyle = 'black';
+            baseCtx.fillRect(0, 0, baseCanvas.width, baseCanvas.height);
+            createNewLayer();
             recordedVideos = [];
             updateVideoList();
         });
