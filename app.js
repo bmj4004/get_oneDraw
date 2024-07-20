@@ -61,8 +61,10 @@ function displayVideoList(title) {
 }
 
 function clearVideoList() {
-    videoListDiv.innerHTML = "<h3>Recorded Videos</h3>"; // 비디오 리스트 제목을 제외하고 모두 비우기
-    videoURLs = []; // 비디오 URL 목록 초기화
+    while (videoListDiv.children.length > 1) { // 첫 번째 자식 요소 (h3 태그)를 제외하고 모든 자식 요소 제거
+        videoListDiv.removeChild(videoListDiv.lastChild);
+    }
+    videoURLs = []; // URL 목록 초기화
 }
 
 saveAllVideosButton.addEventListener('click', function() {
