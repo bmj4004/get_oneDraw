@@ -10,14 +10,8 @@
             padding: 20px;
             font-family: Arial, sans-serif;
         }
-        #canvasContainer {
-            position: relative;
+        #canvas, #recordingCanvas {
             border: 1px solid #ccc;
-        }
-        canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
         }
         #videoList {
             margin-top: 20px;
@@ -34,12 +28,17 @@
     </style>
 </head>
 <body>
-    <div id="canvasContainer"></div>
+    <canvas id="canvas"></canvas>
+    <!-- 녹화용 캔버스 추가 -->
+    <canvas id="recordingCanvas" style="display:none;"></canvas>
     <div id="videoList"></div>
     <button id="resetBtn">초기화</button>
 
     <script>
-        const canvasContainer = document.getElementById('canvasContainer');
+        const canvas = document.getElementById('canvas');
+        const recordingCanvas = document.getElementById('recordingCanvas');
+        const ctx = canvas.getContext('2d');
+        const recordingCtx = recordingCanvas.getContext('2d');
         const videoList = document.getElementById('videoList');
         const resetBtn = document.getElementById('resetBtn');
 
@@ -47,60 +46,27 @@
         let mediaRecorder;
         let chunks = [];
         let recordedVideos = [];
-        let currentCanvas;
-        let currentCtx;
-        let baseCanvas;
-        let baseCtx;
 
-        // 캔버스 크기 설정
+        // 캔버스 크기 설정 함수
         function resizeCanvas() {
             const size = Math.min(window.innerWidth - 40, window.innerHeight - 100);
-            canvasContainer.style.width = `${size}px`;
-            canvasContainer.style.height = `${size}px`;
-            
-            if (baseCanvas) {
-                baseCanvas.width = size;
-                baseCanvas.height = size;
-                baseCtx.fillStyle = 'black';
-                baseCtx.fillRect(0, 0, size, size);
-            }
-
-            if (currentCanvas) {
-                currentCanvas.width = size;
-                currentCanvas.height = size;
-            }
+            canvas.width = size;
+            canvas.height = size;
+            recordingCanvas.width = size;
+            recordingCanvas.height = size;
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            recordingCtx.fillStyle = 'black';
+            recordingCtx.fillRect(0, 0, recordingCanvas.width, recordingCanvas.height);
         }
 
-        function createBaseCanvas() {
-            baseCanvas = document.createElement('canvas');
-            baseCtx = baseCanvas.getContext('2d');
-            baseCanvas.style.zIndex = 0;
-            canvasContainer.appendChild(baseCanvas);
-            baseCtx.fillStyle = 'black';
-            baseCtx.fillRect(0, 0, baseCanvas.width, baseCanvas.height);
-        }
-
-        function createNewLayer() {
-            if (currentCanvas) {
-                baseCtx.drawImage(currentCanvas, 0, 0);
-                canvasContainer.removeChild(currentCanvas);
-            }
-            currentCanvas = document.createElement('canvas');
-            currentCtx = currentCanvas.getContext('2d');
-            currentCanvas.style.zIndex = 1;
-            canvasContainer.appendChild(currentCanvas);
-            resizeCanvas();
-        }
-
-        createBaseCanvas();
-        createNewLayer();
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
 
         // 터치 이벤트 리스너
-        currentCanvas.addEventListener('touchstart', startDrawing);
-        currentCanvas.addEventListener('touchmove', draw);
-        currentCanvas.addEventListener('touchend', stopDrawing);
+        canvas.addEventListener('touchstart', startDrawing);
+        canvas.addEventListener('touchmove', draw);
+        canvas.addEventListener('touchend', stopDrawing);
 
         function startDrawing(e) {
             isDrawing = true;
@@ -112,31 +78,33 @@
             if (!isDrawing) return;
             e.preventDefault();
             const touch = e.touches[0];
-            const rect = currentCanvas.getBoundingClientRect();
+            const rect = canvas.getBoundingClientRect();
             const x = touch.clientX - rect.left;
             const y = touch.clientY - rect.top;
 
-            currentCtx.lineWidth = 2;
-            currentCtx.lineCap = 'round';
-            currentCtx.strokeStyle = 'white';
-
-            currentCtx.lineTo(x, y);
-            currentCtx.stroke();
-            currentCtx.beginPath();
-            currentCtx.moveTo(x, y);
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = 'white';
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x, y);
         }
 
         function stopDrawing() {
             isDrawing = false;
-            currentCtx.beginPath();
+            ctx.beginPath();
             stopRecording();
-            createNewLayer();
         }
 
-        // 녹화 기능
+        // 녹화 기능 시작
         function startRecording() {
+            // 녹화 시작 전에 녹화용 캔버스 초기화
+            recordingCtx.fillStyle = 'black';
+            recordingCtx.fillRect(0, 0, recordingCanvas.width, recordingCanvas.height);
+
             chunks = [];
-            const stream = currentCanvas.captureStream(30);
+            const stream = recordingCanvas.captureStream(30);
             mediaRecorder = new MediaRecorder(stream);
 
             mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
@@ -172,9 +140,10 @@
 
         // 초기화 버튼
         resetBtn.addEventListener('click', () => {
-            baseCtx.fillStyle = 'black';
-            baseCtx.fillRect(0, 0, baseCanvas.width, baseCanvas.height);
-            createNewLayer();
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            recordingCtx.fillStyle = 'black';
+            recordingCtx.fillRect(0, 0, recordingCanvas.width, recordingCanvas.height);
             recordedVideos = [];
             updateVideoList();
         });
